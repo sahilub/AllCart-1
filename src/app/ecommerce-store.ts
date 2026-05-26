@@ -1,74 +1,21 @@
-import { Component, computed, input, signal } from '@angular/core';
+import { computed, inject } from "@angular/core";
+import { product } from "./models/product"
+import {patchState, signalMethod, signalStore, withComputed, withMethods, withState} from "@ngrx/signals";
+import { produce } from 'immer';
+import { Toaster } from "./services/toaster";
 
-import { product } from '../../models/product';
-import { ProductCard } from "../../component/product-card/product-card";
-import {MatSidenav , MatSidenavContainer , MatSidenavContent } from '@angular/material/sidenav'
-import { MatNavList, MatListItem, MatListItemTitle } from '@angular/material/list'
-import { RouterLink } from "@angular/router";
-import { TitleCasePipe } from '@angular/common';
-import { ToggleWishlistButton } from "../../component/toggle-wishlist-button/toggle-wishlist-button";
+export type EcommerceState={
+    products : product[];
+    category :string;
+    wishlistItems: product[];
+}
 
-@Component({
-  selector: 'app-products-grid',
-  imports: [TitleCasePipe, ProductCard, MatSidenav, MatSidenavContainer, MatSidenavContent, MatNavList, MatListItem, MatListItemTitle, RouterLink, ToggleWishlistButton],
-  template: ` 
-
-  <mat-sidenav-container >
-     <mat-sidenav mode='side' opened="true">
-      <div class="p-6">
-        <h2  class="text-lg text-gray-900">
-          Categories
-        </h2>
-        <mat-nav-list>
-          @for (cat of categories(); track cat) {
-            <mat-list-item [activated]="cat === category()" class="my-2" [routerLink]="['/products',cat]">
-              <span matListItemTitle class="font-medium" [class]="cat === category()? '!text-white':null ">{{cat | titlecase}}</span>
-            </mat-list-item>
-          }
-
-        </mat-nav-list>
-
-
-      </div>
-     </mat-sidenav>  
-      <mat-sidenav-content class="bg-gray-100 p-6 h-full" >
-     
-      <h1 class="text-2xl font-bold text-gray-900 mb-1">{{ category() | titlecase}}</h1> 
-      <p class="text-base text-gray-600 mb-6">
-          {{filterProducts().length}} products found
-      </p>
-        <div class="responsive-grid">
-          @for (product of filterProducts(); track product.id) {
-          <app-product-card [product]="product">
-
-            <app-toggle-wishlist-button class="!absolute z-10 top-3 right-3 w-10 h-10 rounded-full" 
-              [product]="product" />
-
-          </app-product-card>
-          }
-        </div> 
-
-    </mat-sidenav-content>
-  </mat-sidenav-container>
-
-   <div class="bg-gray-100 p-6 h-full">
- 
-  </div>
-
-   
-   `,
-  styles: ``,
-})
-export default class ProductsGrid {
-
-    category = input<string>('all');
-    addtocart(){
-      
-    }
-    categories = signal<string[]>(['all','Electronics', 'Home Appliances', 'Outdoor Gear', 'Furniture', 'Apparel', 'Fitness', 'Kitchen', 'Grocery', 'Home Decor', 'Toys & Games'])
-
-    products = signal<product[]>([
-      {
+export const EcommerceStore = signalStore(
+    {
+        providedIn:'root',
+    },
+    withState({
+        products:[ {
     id: 1,
     name: "Noise-Cancelling Wireless Headphones",
     price: 199.99,
@@ -287,15 +234,45 @@ export default class ProductsGrid {
     reviewCount: 1850,
     inStock: true,
     category: "Toys & Games"
-  }
-    ])
-
-    filterProducts = computed( () => {
-      const selectedCategory = this.category().toLowerCase();
-      if (selectedCategory === 'all') {
-        return this.products();
+  }],
+        category:'all',
+        wishlistItems:[],
+    } as EcommerceState),
+    withComputed(({category , products , wishlistItems })  =>({
+      filterProducts : computed( () => {
+        if (category() === 'all') {
+        return products();
       }
-      return this.products().filter(p => p.category.toLowerCase() === selectedCategory);
-    })
+      return products().filter((p) => p.category.toLowerCase() === category().toLowerCase());
+      }),
+      wishlistCount: computed(() => wishlistItems().length)
+    }) ),
+    withMethods((store ,toaster = inject(Toaster)) =>({
+        setCategory: signalMethod<string>((category:string)=>{
+            patchState(store, { category});
+        }),
+        addToWishlist:(product : product)=>{
+            const updateWishlistItem= produce(store.wishlistItems(),(draft)=>{
+                if( !draft.find(p => p.id === product.id)){
+                    draft.push(product);
+                }
+                    
+            });
+            patchState(store , {wishlistItems: updateWishlistItem});
+            toaster.success("Products is added to wishlist")
+        },
+        removeFromWishlist:(product : product)=>{
+          patchState(store,{
+            wishlistItems:store.wishlistItems().filter(p=> p.id !== product.id),
+          });
+          toaster.success('Product is Remove')
+        },
+      clearWishlist:()=>{
+        patchState(store,{wishlistItems:[]})
+      }
 
-}
+    }))
+    
+ 
+
+)

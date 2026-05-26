@@ -1,5 +1,6 @@
 @use '@angular/material' as mat;
 @use 'tailwindcss';
+@use '@ngxpert/hot-toast/styles' as hot-toast;
 
 html {
   @include mat.theme(
