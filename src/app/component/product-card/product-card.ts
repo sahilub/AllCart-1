@@ -25,7 +25,7 @@ import { EcommerceStore } from '../../ecommerce-store';
 
         <div class="flex item-center justify-between mt-auto">
           <span  class="text-2xl font-bold text-gray-900">\${{product().price}}</span>
-          <button matButton="filled" class="flex item-center gap-2" (click)="addtocartClick.emit(product())">
+          <button matButton="filled" class="flex item-center gap-2" (click)="store.addToCart(product() , 1)">
             <mat-icon>shoping_cart</mat-icon>
             Add to Cart
           </button>

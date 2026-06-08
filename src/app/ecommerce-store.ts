@@ -3,11 +3,13 @@ import { product } from "./models/product"
 import {patchState, signalMethod, signalStore, withComputed, withMethods, withState} from "@ngrx/signals";
 import { produce } from 'immer';
 import { Toaster } from "./services/toaster";
+import { CartItem } from "./models/cart";
 
 export type EcommerceState={
     products : product[];
     category :string;
     wishlistItems: product[];
+    CartItems: CartItem[];
 }
 
 export const EcommerceStore = signalStore(
@@ -237,15 +239,17 @@ export const EcommerceStore = signalStore(
   }],
         category:'all',
         wishlistItems:[],
+        CartItems:[],
     } as EcommerceState),
-    withComputed(({category , products , wishlistItems })  =>({
+    withComputed(({category , products , wishlistItems , CartItems })  =>({
       filterProducts : computed( () => {
         if (category() === 'all') {
         return products();
       }
       return products().filter((p) => p.category.toLowerCase() === category().toLowerCase());
       }),
-      wishlistCount: computed(() => wishlistItems().length)
+      wishlistCount: computed(() => wishlistItems().length),
+      cartCount :computed(()=> CartItems().reduce((acc , item) => acc + item.quantity,0))
     }) ),
     withMethods((store ,toaster = inject(Toaster)) =>({
         setCategory: signalMethod<string>((category:string)=>{
@@ -269,8 +273,31 @@ export const EcommerceStore = signalStore(
         },
       clearWishlist:()=>{
         patchState(store,{wishlistItems:[]})
-      }
+      },
+      addToCart: (product: product , quantity:number= 1) =>{
+        const existingItemIndex = store.CartItems().findIndex(i => i.product.id === product.id);
+        const updatedCartItems = produce(store.CartItems() , (draft) =>{
+          if ( existingItemIndex !==-1){
+            draft[existingItemIndex].quantity += quantity;
+            return;
+          }
+          draft.push({
+            product, quantity
+          })
+            
+        })
 
+        patchState(store , {CartItems : updatedCartItems})
+        toaster.success( existingItemIndex !== -1? 'Product added again' : 'Product added to cart')
+      },
+      setItemQuantity(params: {productId: number , quantity:number}){
+        const index = store.CartItems().findIndex(c => c.product.id === params.productId);
+        const updated = produce(store.CartItems() , (draft) => {
+          draft[index].quantity = params.quantity
+        });
+
+        patchState(store , {CartItems : updated});
+      }
     }))
     
  
