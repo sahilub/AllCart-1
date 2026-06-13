@@ -297,9 +297,34 @@ export const EcommerceStore = signalStore(
         });
 
         patchState(store , {CartItems : updated});
-      }
-    }))
-    
- 
+      },
 
-)
+      addAllWishlistToCart: () => {
+        const updatedCartItems = produce(store.CartItems(), (draft) => {
+          store.wishlistItems().forEach(p => {
+            if (!draft.find(c => c.product.id === p.id)) {
+              draft.push({ product: p, quantity: 1 });
+            }
+          })
+        }) 
+        patchState(store, { CartItems: updatedCartItems, wishlistItems: [] })
+      },
+
+      moveToWishist: ( product : product ) =>{
+        const updatedCartItems = store.CartItems().filter((p) => p.product.id !== product.id );
+        const updateWishlistItem = produce(store.wishlistItems() , (draft)=>{
+          if (!draft.find((p) => p.id === product.id)){
+            draft.push(product);
+          }
+        });
+        patchState(store,{CartItems : updatedCartItems , wishlistItems:updateWishlistItem});
+      },
+
+      removeFromCart:(product:product) =>{
+        patchState(store , {
+          CartItems:store.CartItems().filter((c) => c.product.id !== product.id),
+        })
+      }
+
+    }))
+);
