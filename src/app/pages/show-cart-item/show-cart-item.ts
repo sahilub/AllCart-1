@@ -21,7 +21,7 @@ import { MatIconButton } from '@angular/material/button';
         (qtyUpdate)="store.setItemQuantity({productId:item().product.id , quantity:$event})"/>
         <div class="flex flex-col item-end">
           <div class="text-right font-semibold text-lg">
-            {{total()}}
+            \${{ total()}}
           </div>
           <div class="flex justify-end -me-3">
             <button matIconButton (click)="store.moveToWishist(item().product)">

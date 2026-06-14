@@ -324,7 +324,10 @@ export const EcommerceStore = signalStore(
         patchState(store , {
           CartItems:store.CartItems().filter((c) => c.product.id !== product.id),
         })
-      }
+      },
+       clearAddtoCart:()=>{
+        patchState(store,{CartItems:[]})
+      },
 
     }))
 );
